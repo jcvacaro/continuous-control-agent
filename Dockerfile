@@ -36,4 +36,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
-#RUN pip install dm-sonnet
+RUN cd / \
+    && git clone https://github.com/udacity/deep-reinforcement-learning.git \
+    && cd deep-reinforcement-learning/python \
+    && pip install -e .

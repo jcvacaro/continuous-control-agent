@@ -47,7 +47,8 @@ parser.add_argument('--beta_inc', help="The importance sampling exponent increme
 parser.add_argument('--network', choices=["linear", "linear_duel"], help="The neural network model", default="linear_duel")
 
 def create_environment():
-    env = UnityEnvironment(file_name="Reacher_Windows_x86_64/Reacher.app")
+    #env = UnityEnvironment(file_name="Reacher_Env/Reacher.app")
+    env = UnityEnvironment(file_name="Reacher_Env/Reacher.app", docker_training=True, no_graphics=False)
 
     # get the default brain
     brain_name = env.brain_names[0]
