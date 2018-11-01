@@ -14,7 +14,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Agent():
     """Interacts with and learns from the environment."""
     
-    def __init__(self, state_size, action_size, seed, memory, batch_size, lr_actor, lr_critic, gamma, tau, weight_decay):
+    def __init__(self, state_size, action_size, seed, memory, batch_size, lr_actor, lr_critic, gamma, tau, weight_decay, update_network_steps, sgd_epoch):
         """Initialize an Agent object.
         
         Params
@@ -29,6 +29,8 @@ class Agent():
             gamma (float): The reward discount factor
             tau (float): For soft update of target parameters
             weight_decay (float): The weight decay
+            update_network_steps (int): How often to update the network
+            sgd_epoch (int): Number of iterations for each network update
         """
         self.state_size = state_size
         self.action_size = action_size
@@ -40,6 +42,11 @@ class Agent():
         self.gamma = gamma
         self.tau = tau
         self.weight_decay = weight_decay
+        self.update_network_steps = update_network_steps
+        self.sgd_epoch = sgd_epoch
+        self.n_step = 0
+        self.actor_loss = 0
+        self.critic_loss = 0
 
         # Actor Network (w/ Target Network)
         self.actor_local = Actor(state_size, action_size, seed).to(device)
@@ -57,12 +64,17 @@ class Agent():
     def step(self, state, action, reward, next_state, done):
         """Save experience in replay memory, and use random sample from buffer to learn."""
         # Save experience / reward
-        self.memory.add(state, action, reward, next_state, done)
-
-        # Learn, if enough samples are available in memory
-        if len(self.memory) > self.batch_size:
-            experiences = self.memory.sample()
-            self.learn(experiences, self.gamma)
+        for i in range(state.shape[0]):
+            self.memory.add(state[i], action[i], reward[i], next_state[i], done[i])
+         
+        # learn every n steps
+        self.n_step = (self.n_step + 1) % self.update_network_steps
+        if self.n_step == 0:
+            # Learn, if enough samples are available in memory
+            if len(self.memory) > self.batch_size:
+                for i in range(self.sgd_epoch):
+                    experiences = self.memory.sample()
+                    self.learn(experiences, self.gamma)
 
     def act(self, state, add_noise=True):
         """Returns actions for given state as per current policy."""
@@ -90,10 +102,8 @@ class Agent():
             experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
             gamma (float): discount factor
         """
-        states, actions, rewards, next_states, dones, _, _ = experiences
-        dones = dones.unsqueeze(1)
-        rewards = rewards.unsqueeze(1)
-
+        states, actions, rewards, next_states, dones, weights, _ = experiences
+        
         # ---------------------------- update critic ---------------------------- #
         # Get predicted next-state actions and Q values from target models
         actions_next = self.actor_target(next_states)
@@ -103,15 +113,18 @@ class Agent():
         # Compute critic loss
         Q_expected = self.critic_local(states, actions)
         critic_loss = F.mse_loss(Q_expected, Q_targets)
+        self.critic_loss = critic_loss
         # Minimize the loss
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
+        torch.nn.utils.clip_grad_norm(self.critic_local.parameters(), 0.5)
         self.critic_optimizer.step()
 
         # ---------------------------- update actor ---------------------------- #
         # Compute actor loss
         actions_pred = self.actor_local(states)
         actor_loss = -self.critic_local(states, actions_pred).mean()
+        self.actor_loss = actor_loss
         # Minimize the loss
         self.actor_optimizer.zero_grad()
         actor_loss.backward()

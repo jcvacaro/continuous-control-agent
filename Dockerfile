@@ -36,7 +36,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
-RUN cd / \
-    && git clone https://github.com/udacity/deep-reinforcement-learning.git \
-    && cd deep-reinforcement-learning/python \
-    && pip install -e .
+RUN pip install unityagents==0.4.0
+
+#RUN cd / \
+#    && git clone https://github.com/udacity/deep-reinforcement-learning.git \
+#    && cd deep-reinforcement-learning/python \
+#    && pip install -e .
