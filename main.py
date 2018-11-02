@@ -15,6 +15,7 @@ from ddpg_agent import Agent
 parser = argparse.ArgumentParser(description="DQN Reinforcement Learning Agent")
 
 parser.add_argument('--seed', help="Seed for random number generation", type=int, default=3)
+parser.add_argument('--env', help="The environment path", default="Reacher_1/Reacher.app")
 parser.add_argument('--checkpoint_suffix', help="The model checkpoint file name", default="")
 
 # training/testing flags
@@ -47,7 +48,7 @@ parser.add_argument('--beta_inc', help="The importance sampling exponent increme
 parser.add_argument('--network', choices=["linear", "linear_duel"], help="The neural network model", default="linear_duel")
 
 def create_environment():
-    env = UnityEnvironment(file_name="Reacher_20/Reacher.app", no_graphics=True)
+    env = UnityEnvironment(file_name=args.env, no_graphics=True)
     #env = UnityEnvironment(file_name="Reacher_Env/Reacher.app", docker_training=True, no_graphics=False)
 
     # get the default brain
