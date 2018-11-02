@@ -14,7 +14,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Agent():
     """Interacts with and learns from the environment."""
     
-    def __init__(self, state_size, action_size, seed, memory, batch_size, lr_actor, lr_critic, gamma, tau, weight_decay, update_network_steps, sgd_epoch):
+    def __init__(self, state_size, action_size, seed, memory, batch_size, lr_actor, lr_critic, clip_critic, gamma, tau, weight_decay, update_network_steps, sgd_epoch):
         """Initialize an Agent object.
         
         Params
@@ -26,6 +26,7 @@ class Agent():
             batch_size (int): Number of experiences to sample from the memory
             lr_actor (float): The learning rate for the actor
             lr_critic (float): The learning rate critic
+            clip_critic (float): The clip value for updating grads
             gamma (float): The reward discount factor
             tau (float): For soft update of target parameters
             weight_decay (float): The weight decay
@@ -39,6 +40,7 @@ class Agent():
         self.batch_size = batch_size
         self.lr_actor = lr_actor
         self.lr_critic = lr_critic
+        self.clip_critic = clip_critic
         self.gamma = gamma
         self.tau = tau
         self.weight_decay = weight_decay
@@ -117,7 +119,8 @@ class Agent():
         # Minimize the loss
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
-        torch.nn.utils.clip_grad_norm(self.critic_local.parameters(), 0.5)
+        if self.clip_critic > 0:
+            torch.nn.utils.clip_grad_norm(self.critic_local.parameters(), self.clip_critic)
         self.critic_optimizer.step()
 
         # ---------------------------- update actor ---------------------------- #

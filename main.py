@@ -32,6 +32,7 @@ parser.add_argument('--tau', help="For soft update of target parameters", type=f
 parser.add_argument('--lr', help="The learning rate ", type=float, default=0.00025)
 parser.add_argument('--lr_actor', help="The learning rate for the actor", type=float, default=1e-4)
 parser.add_argument('--lr_critic', help="The learning rate for the critic", type=float, default=1e-3)
+parser.add_argument('--clip_critic', help="The clip value for updating grads", type=float, default=1)
 parser.add_argument('--weight_decay', help="The weight decay", type=float, default=0)
 parser.add_argument('--update_network_steps', help="How often to update the network", type=int, default=20)
 parser.add_argument('--sgd_epoch', help="Number of iterations for each network update", type=int, default=20)
@@ -175,6 +176,7 @@ if __name__ == '__main__':
                   memory=memory,
                   lr_actor=args.lr_actor,
                   lr_critic=args.lr_critic,
+                  clip_critic=args.clip_critic,
                   gamma=args.gamma,
                   tau=args.tau,
                   weight_decay=args.weight_decay,
