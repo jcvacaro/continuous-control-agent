@@ -17,7 +17,8 @@ X11_DOCKER="docker run -it \
 pyt_run_base() {
     xhost +
     $X11_DOCKER --rm --name="$1" \
-        -v $PWD:/workspace/ \
+        -v $PWD:/workspace \
+        -w /workspace \
         $PYT_IMAGE "$2"
 }
 

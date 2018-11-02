@@ -14,10 +14,8 @@ from ddpg_agent import Agent
 # Arguments Parsing Settings
 parser = argparse.ArgumentParser(description="DQN Reinforcement Learning Agent")
 
-parser.add_argument('--seed', help="Seed for random number generation", type=int, default=0)
-parser.add_argument('--checkpoint', help="The model checkpoint file name", default="checkpoint.pth")
-parser.add_argument('--reward_plot', help="The reward plot", default="reward_plot.png")
-parser.add_argument('--reward_history_plot', help="The reward plot of the entire experiment", default="reward_history_plot.png")
+parser.add_argument('--seed', help="Seed for random number generation", type=int, default=3)
+parser.add_argument('--checkpoint_suffix', help="The model checkpoint file name", default="")
 
 # training/testing flags
 parser.add_argument('--train', help="train or test (flag)", action="store_true")
@@ -49,7 +47,7 @@ parser.add_argument('--beta_inc', help="The importance sampling exponent increme
 parser.add_argument('--network', choices=["linear", "linear_duel"], help="The neural network model", default="linear_duel")
 
 def create_environment():
-    env = UnityEnvironment(file_name="Reacher_Env/Reacher.app", no_graphics=True)
+    env = UnityEnvironment(file_name="Reacher_20/Reacher.app", no_graphics=True)
     #env = UnityEnvironment(file_name="Reacher_Env/Reacher.app", docker_training=True, no_graphics=False)
 
     # get the default brain
@@ -74,30 +72,6 @@ def create_environment():
     print('The state for the first agent looks like:', states[0])
 
     return env, brain, brain_name, num_agents, action_size, state_size
-
-def test(agent, env, brain, brain_name, n_episodes):
-    if os.path.isfile(args.checkpoint):
-        print("loading checkpoint for agent:", args.checkpoint)
-        agent.qnetwork_local.load_state_dict(torch.load(args.checkpoint))
-
-    # watch an untrained agent
-    score = 0
-    for i_episode in range(1, n_episodes+1):
-        env_info = env.reset(train_mode=False)[brain_name]
-        state = env_info.vector_observations[0]
-        while True:
-            action = agent.act(state)
-            
-            env_info = env.step(int(action))[brain_name]        # send the action to the environment
-            state = env_info.vector_observations[0]   # get the next state
-            reward = env_info.rewards[0]                   # get the reward
-            done = env_info.local_done[0]                  # see if episode has finished
-            
-            score += reward
-            if done:
-                break 
-            
-    print("score:", float(score)/float(n_episodes))
 
 def train(agent, env, brain, brain_name, num_agents, n_episodes, eps_start, eps_end, eps_decay):
     actor_loss_episodes = deque(maxlen=n_episodes)
@@ -141,20 +115,20 @@ def train(agent, env, brain, brain_name, num_agents, n_episodes, eps_start, eps_
         print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, score_window), end="")
         if i_episode % 100 == 0:
             print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, score_window))
-            save_checkpoint(scores_episodes, actor_loss_episodes, critic_loss_episodes)
+            save_checkpoint(scores_episodes, actor_loss_episodes, critic_loss_episodes, scores_window)
         if score_window >= 30.0:
             print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode, score_window))
             #torch.save(agent.qnetwork_local.state_dict(), args.checkpoint)
-            plot_rewards(args.reward_plot, scores_window)
             break
 
     # plot score history
-    save_checkpoint(scores_episodes, actor_loss_episodes, critic_loss_episodes)
+    save_checkpoint(scores_episodes, actor_loss_episodes, critic_loss_episodes, scores_window)
   
-def save_checkpoint(scores_episodes, actor_loss_episodes, critic_loss_episodes):
-    plot_rewards(args.reward_history_plot, scores_episodes)
-    plot_rewards("actor_loss.png", actor_loss_episodes)
-    plot_rewards("critic_loss.png", critic_loss_episodes)
+def save_checkpoint(scores_episodes, actor_loss_episodes, critic_loss_episodes, scores_window):
+    plot_rewards("reward_history_plot_" + args.checkpoint_suffix + ".png", scores_episodes)
+    plot_rewards("actor_loss_" + args.checkpoint_suffix + ".png", actor_loss_episodes)
+    plot_rewards("critic_loss_" + args.checkpoint_suffix + ".png", critic_loss_episodes)
+    plot_rewards("reward_plot_" + args.checkpoint_suffix + ".png", scores_window)
 
 def plot_rewards(filename, scores):
     fig = plt.figure()
@@ -212,7 +186,7 @@ if __name__ == '__main__':
               eps_start=args.eps_start, 
               eps_end=args.eps_end, 
               eps_decay=args.eps_decay)
-    else:
-        test(agent, env, brain, brain_name, n_episodes=args.test_episodes)
+#    else:
+#        test(agent, env, brain, brain_name, n_episodes=args.test_episodes)
 
     env.close()
