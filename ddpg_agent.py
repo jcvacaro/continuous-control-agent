@@ -106,6 +106,8 @@ class Agent():
         """
         states, actions, rewards, next_states, dones, weights, _ = experiences
         
+        rewards = (rewards - rewards.mean().float()) / (rewards.std().float() + 1.0e-10)
+        
         # ---------------------------- update critic ---------------------------- #
         # Get predicted next-state actions and Q values from target models
         actions_next = self.actor_target(next_states)
