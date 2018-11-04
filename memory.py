@@ -36,6 +36,89 @@ class experience:
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
 
+    def __init__(self, action_size, state_size, buffer_size):
+        """Initialize a ReplayBuffer object.
+
+        Params
+        ======
+            action_size (int): dimension of each action
+            state_size (int): dimension of each state
+            buffer_size (int): maximum size of buffer
+        """
+        self.action_size = action_size
+        self.state_size = state_size
+        self.memory = deque(maxlen=buffer_size)  
+    
+    def add(self, state, action, reward, next_state, done):
+        """Add a new experience to memory."""
+        e = experience(state, action, reward, next_state, done)
+        self.memory.append(e)
+        
+    def sample(self):
+        """Randomly sample a batch of experiences from memory."""
+        experiences = self.sample_experiences()
+        batch_size = len(experiences)
+        
+        states = np.zeros((batch_size, *experiences[0].state.shape), dtype=np.float)
+        actions = np.zeros((batch_size, *experiences[0].action.shape), dtype=np.float)
+        rewards = np.zeros((batch_size, *experiences[0].reward.shape), dtype=np.float)
+        next_states = np.zeros((batch_size, *experiences[0].state.shape), dtype=np.float)
+        dones = np.zeros((batch_size, *experiences[0].done.shape), dtype=np.float)
+        
+        for i, e in enumerate(experiences):
+            states[i] = e.state
+            actions[i] = e.action
+            rewards[i] = e.reward
+            next_states[i] = e.next_state
+            dones[i] = e.done
+
+        # place tensors in GPU for faster calculations
+        states = torch.from_numpy(states).float().to(device)
+        actions = torch.from_numpy(actions).float().to(device)
+        rewards = torch.from_numpy(rewards).float().to(device)
+        next_states = torch.from_numpy(next_states).float().to(device)
+        dones = torch.from_numpy(dones).float().to(device)
+        weights = torch.ones(*dones.shape, dtype=torch.float, device=device)
+        
+        return (states, actions, rewards, next_states, dones, weights, None)
+
+    def __len__(self):
+        """Return the current size of internal memory."""
+        return len(self.memory)
+
+    def sample_experiences(self):
+        pass
+
+    def update(self, entries, errors):
+        pass
+        
+    def reset():
+        pass
+
+class DeterministicReplayBuffer(ReplayBuffer):
+    """Fixed-size buffer to store experience tuples."""
+
+    def __init__(self, action_size, state_size, buffer_size, batch_size):
+        """Initialize a ReplayBuffer object.
+
+        Params
+        ======
+            action_size (int): dimension of each action
+            state_size (int): dimension of each state
+            buffer_size (int): maximum size of buffer
+            batch_size (int): size of each training batch
+        """
+        super(DeterministicReplayBuffer, self).__init__(action_size, state_size, buffer_size)
+
+    def sample_experiences(self):
+        return self.memory
+        
+    def reset():
+        self.memory = deque(maxlen=self.buffer_size)  
+
+class UniformReplayBuffer(ReplayBuffer):
+    """Fixed-size buffer to store experience tuples."""
+
     def __init__(self, action_size, state_size, buffer_size, batch_size, seed):
         """Initialize a ReplayBuffer object.
 
@@ -47,50 +130,13 @@ class ReplayBuffer:
             batch_size (int): size of each training batch
             seed (int): random seed
         """
-        self.action_size = action_size
-        self.state_size = state_size
-        self.memory = deque(maxlen=buffer_size)  
+        super(UniformReplayBuffer, self).__init__(action_size, state_size, buffer_size)
         self.batch_size = batch_size
         self.seed = random.seed(seed)
-    
-    def add(self, state, action, reward, next_state, done):
-        """Add a new experience to memory."""
-        e = experience(state, action, reward, next_state, done)
-        self.memory.append(e)
-    
-    def sample(self):
-        """Randomly sample a batch of experiences from memory."""
-        experiences = random.sample(self.memory, k=self.batch_size)
-        states = np.zeros((self.batch_size, self.state_size), dtype=np.float)
-        actions = np.zeros((self.batch_size, self.action_size), dtype=np.float)
-        rewards = np.zeros((self.batch_size,1), dtype=np.float)
-        next_states = np.zeros((self.batch_size, self.state_size), dtype=np.float)
-        dones = np.zeros((self.batch_size,1), dtype=np.uint8)
-        
-        for i, e in enumerate(experiences):
-            states[i,:] = e.state
-            actions[i,:] = e.action
-            rewards[i] = e.reward
-            next_states[i,:] = e.next_state
-            dones[i] = e.done
 
-        # place tensors in GPU for faster calculations
-        states = torch.from_numpy(states).float().to(device)
-        actions = torch.from_numpy(actions).float().to(device)
-        rewards = torch.from_numpy(rewards).float().to(device)
-        next_states = torch.from_numpy(next_states).float().to(device)
-        dones = torch.from_numpy(dones).float().to(device)
-        weights = torch.ones(self.batch_size, 1, dtype=torch.float, device=device)
-        
-        return (states, actions, rewards, next_states, dones, weights, None)
+    def sample_experiences(self):
+        return random.sample(self.memory, k=self.batch_size)
 
-    def update(self, entries, errors):
-        pass
-        
-    def __len__(self):
-        """Return the current size of internal memory."""
-        return len(self.memory)
-        
 class PrioritizedReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
 
@@ -161,7 +207,7 @@ class PrioritizedReplayBuffer:
 
         # place tensors in GPU for faster calculations
         states = torch.from_numpy(states).float().to(device)
-        actions = torch.from_numpy(actions).float().to(device)
+        actions = torch.from_numpy(actions).long().to(device)
         rewards = torch.from_numpy(rewards).float().to(device)
         next_states = torch.from_numpy(next_states).float().to(device)
         dones = torch.from_numpy(dones).float().to(device)
