@@ -3,6 +3,7 @@ import random
 import copy
 from collections import namedtuple, deque
 
+import utils
 from model import Actor, Critic
 
 import torch
@@ -69,11 +70,11 @@ class Agent():
         # Noise process
         self.noise = OUNoise(action_size, seed)
 
-    def step(self, state, action, reward, next_state, done):
+    def step(self, state, action, action_prob, reward, next_state, done):
         """Save experience in replay memory, and use random sample from buffer to learn."""
         # Save experience / reward
         for i in range(len(state)):
-            self.memory.add(state[i], action[i], reward[i], next_state[i], done[i])
+            self.memory.add(state[i], action[i], action_prob[i], reward[i], next_state[i], done[i])
          
         # learn every n steps
         self.n_step = (self.n_step + 1) % self.update_network_steps
@@ -93,7 +94,7 @@ class Agent():
         self.actor_local.train()
         if add_noise:
             action += self.noise.sample()
-        return np.clip(action, -1, 1)
+        return np.clip(action, -1, 1), np.zeros_like(action) # N/A action prob for DDPG
 
     def reset(self):
         self.noise.reset()
@@ -110,7 +111,7 @@ class Agent():
             experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
             gamma (float): discount factor
         """
-        states, actions, rewards, next_states, dones, weights, _ = experiences
+        states, actions, action_probs, rewards, next_states, dones = experiences
 
         # normalize rewards
         rewards = (rewards - rewards.mean().float()) / (rewards.std().float() + 1.0e-10)

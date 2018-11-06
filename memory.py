@@ -16,22 +16,13 @@ class experience:
     It provides the __lt__ method so that it can be added to a heapq.
     """
     
-    def __init__(self, state, action, reward, next_state, done, error=1.0):
+    def __init__(self, state, action, action_prob, reward, next_state, done):
         self.state = state
         self.action = action
+        self.action_prob = action_prob
         self.reward = reward
         self.next_state = next_state
         self.done = done
-        self.error = error
-        
-    def __lt__(self, other):
-        return self.error < other.error
-        
-    def __eq__(self, other):
-        return self.error == other.error
-        
-    def __repr__(self):
-        return str(self.error)
 
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
@@ -47,11 +38,12 @@ class ReplayBuffer:
         """
         self.action_size = action_size
         self.state_size = state_size
+        self.buffer_size = buffer_size
         self.memory = deque(maxlen=buffer_size)  
     
-    def add(self, state, action, reward, next_state, done):
+    def add(self, state, action, action_prob, reward, next_state, done):
         """Add a new experience to memory."""
-        e = experience(state, action, reward, next_state, done)
+        e = experience(state, action, action_prob, reward, next_state, done)
         self.memory.append(e)
         
     def sample(self):
@@ -61,6 +53,7 @@ class ReplayBuffer:
         
         states = np.zeros((batch_size, *experiences[0].state.shape), dtype=np.float)
         actions = np.zeros((batch_size, *experiences[0].action.shape), dtype=np.float)
+        action_probs = np.zeros((batch_size, *experiences[0].action_prob.shape), dtype=np.float)
         rewards = np.zeros((batch_size, *experiences[0].reward.shape), dtype=np.float)
         next_states = np.zeros((batch_size, *experiences[0].state.shape), dtype=np.float)
         dones = np.zeros((batch_size, *experiences[0].done.shape), dtype=np.float)
@@ -68,6 +61,7 @@ class ReplayBuffer:
         for i, e in enumerate(experiences):
             states[i] = e.state
             actions[i] = e.action
+            action_probs[i] = e.action_prob
             rewards[i] = e.reward
             next_states[i] = e.next_state
             dones[i] = e.done
@@ -75,12 +69,12 @@ class ReplayBuffer:
         # place tensors in GPU for faster calculations
         states = torch.from_numpy(states).float().to(device)
         actions = torch.from_numpy(actions).float().to(device)
+        action_probs = torch.from_numpy(action_probs).float().to(device)
         rewards = torch.from_numpy(rewards).float().to(device)
         next_states = torch.from_numpy(next_states).float().to(device)
         dones = torch.from_numpy(dones).float().to(device)
-        weights = torch.ones(*dones.shape, dtype=torch.float, device=device)
         
-        return (states, actions, rewards, next_states, dones, weights, None)
+        return (states, actions, action_probs, rewards, next_states, dones)
 
     def __len__(self):
         """Return the current size of internal memory."""
@@ -92,13 +86,13 @@ class ReplayBuffer:
     def update(self, entries, errors):
         pass
         
-    def reset():
+    def reset(self):
         pass
 
 class DeterministicReplayBuffer(ReplayBuffer):
     """Fixed-size buffer to store experience tuples."""
 
-    def __init__(self, action_size, state_size, buffer_size, batch_size):
+    def __init__(self, action_size, state_size, buffer_size):
         """Initialize a ReplayBuffer object.
 
         Params
@@ -106,14 +100,13 @@ class DeterministicReplayBuffer(ReplayBuffer):
             action_size (int): dimension of each action
             state_size (int): dimension of each state
             buffer_size (int): maximum size of buffer
-            batch_size (int): size of each training batch
         """
         super(DeterministicReplayBuffer, self).__init__(action_size, state_size, buffer_size)
 
     def sample_experiences(self):
         return self.memory
         
-    def reset():
+    def reset(self):
         self.memory = deque(maxlen=self.buffer_size)  
 
 class UniformReplayBuffer(ReplayBuffer):
@@ -137,98 +130,3 @@ class UniformReplayBuffer(ReplayBuffer):
     def sample_experiences(self):
         return random.sample(self.memory, k=self.batch_size)
 
-class PrioritizedReplayBuffer:
-    """Fixed-size buffer to store experience tuples."""
-
-    def __init__(self, action_size, state_size, buffer_size, batch_size, seed, update_buffer_steps, alpha, beta, beta_inc):
-        """Initialize a ReplayBuffer object.
-
-        Params
-        ======
-            action_size (int): dimension of each action
-            state_size (int): dimension of each state
-            buffer_size (int): maximum size of buffer
-            batch_size (int): size of each training batch
-            seed (int): random seed
-            update_buffer_steps (int): How often to update the buffer
-            alpha (float): The priority exponent
-            beta (float): The importance sampling exponent
-            beta_inc (float): The importance sampling exponent increment
-        """
-        self.action_size = action_size
-        self.state_size = state_size
-        self.buffer_size = buffer_size
-        self.batch_size = batch_size
-        self.memory = []
-        self.step_counter = 0
-        self.seed = random.seed(seed)
-        self.update_buffer_steps = update_buffer_steps
-        self.alpha = alpha
-        self.beta = beta
-        self.beta_inc = beta_inc
-    
-    def add(self, state, action, reward, next_state, done, error=1.0):
-        """Add a new experience to memory."""
-        e = experience(state, action, reward, next_state, done, error)
-        if len(self.memory) >= self.buffer_size:
-            heapq.heapreplace(self.memory, e)
-        else:
-            heapq.heappush(self.memory, e)
-
-        # sort memory
-        self.step_counter = (self.step_counter + 1) % self.update_buffer_steps
-        if self.step_counter == 0:
-            heapq.heapify(self.memory)
-            self.beta = min(1.0, self.beta * self.beta_inc)
-
-    def sample(self):
-        """Randomly sample a batch of experiences from memory."""
-        states = np.zeros((self.batch_size, self.state_size), dtype=np.float)
-        actions = np.zeros((self.batch_size,1), dtype=np.int32)
-        rewards = np.zeros((self.batch_size,1), dtype=np.float)
-        next_states = np.zeros((self.batch_size, self.state_size), dtype=np.float)
-        dones = np.zeros((self.batch_size,1), dtype=np.uint8)
-        p_j = np.zeros((self.batch_size,1), dtype=np.float)
-        entries = []
-        
-        segment_size = len(self.memory) // self.batch_size
-        for i in range(self.batch_size):
-            start = i * segment_size
-            end = len(self.memory) if i==self.batch_size-1 else (i+1)*segment_size
-            j = random.randint(start, end-1)
-            e = self.memory[j]
-            entries.append(e)
-            states[i,:] = e.state
-            actions[i] = e.action
-            rewards[i] = e.reward
-            next_states[i,:] = e.next_state
-            dones[i] = e.done
-            p_j[i] = e.error
-
-        # place tensors in GPU for faster calculations
-        states = torch.from_numpy(states).float().to(device)
-        actions = torch.from_numpy(actions).long().to(device)
-        rewards = torch.from_numpy(rewards).float().to(device)
-        next_states = torch.from_numpy(next_states).float().to(device)
-        dones = torch.from_numpy(dones).float().to(device)
-        p_j = torch.from_numpy(p_j).float().to(device)
-        n = torch.tensor(self.batch_size, dtype=torch.float, device=device)
-        alpha = torch.tensor(self.alpha, dtype=torch.float, device=device)
-        beta = torch.tensor(self.beta, dtype=torch.float, device=device)
-        
-        # the math
-        p_j = p_j ** alpha
-        p_j = p_j / p_j.sum()
-        weights = (n * p_j) ** -beta
-        weights /= weights.max()
-        
-        return (states, actions, rewards, next_states, dones, weights, entries)
-        
-    def update(self, entries, errors):
-        errors = errors.cpu()
-        for entry, error in zip(entries, errors):
-            entry.error = abs(error[0])
-
-    def __len__(self):
-        """Return the current size of internal memory."""
-        return len(self.memory)

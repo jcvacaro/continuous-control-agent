@@ -7,17 +7,17 @@ import os
 import argparse
 import matplotlib.pyplot as plt
 
-from memory import DeterministicReplayBuffer, UniformReplayBuffer, PrioritizedReplayBuffer
-#from model import QNetwork, DuelQNetwork
+import utils
+from memory import DeterministicReplayBuffer, UniformReplayBuffer
 import ddpg_agent as ddpg
-#import ppo_agent as ppo
+import ppo_agent as ppo
 
 # Arguments Parsing Settings
 parser = argparse.ArgumentParser(description="DQN Reinforcement Learning Agent")
 
 parser.add_argument('--seed', help="Seed for random number generation", type=int, default=3)
 parser.add_argument('--env', help="The environment path", default="Reacher_1/Reacher.app")
-parser.add_argument('--checkpoint_suffix', help="The string suffix for saving checkpoint files", default="")
+parser.add_argument('--checkpoint_suffix', help="The string suffix for saving checkpoint files", default="default")
 
 # training/testing flags
 parser.add_argument('--train', help="train or test (flag)", action="store_true")
@@ -33,11 +33,10 @@ parser.add_argument('--tau', help="For soft update of target parameters", type=f
 parser.add_argument('--weight_decay', help="The weight decay", type=float, default=1e-4)
 parser.add_argument('--update_network_steps', help="How often to update the network", type=int, default=30)
 parser.add_argument('--sgd_epoch', help="Number of iterations for each network update", type=int, default=10)
-parser.add_argument('--eps_start', help="Epsilon start value for exploration/exploitation", type=float, default=1.0)
-parser.add_argument('--eps_decay', help="Epsilon decay value for exploration/exploitation", type=float, default=0.995)
-parser.add_argument('--eps_end', help="Epsilon minimum value for exploration/exploitation", type=float, default=0.01)
-parser.add_argument('--beta', help="The importance sampling exponent", type=float, default=0.5)
-parser.add_argument('--beta_inc', help="The importance sampling exponent increment", type=float, default=1.075)
+parser.add_argument('--eps', help="The PPO epsilon clipping parameter", type=float, default=0.1)
+parser.add_argument('--eps_decay', help="Epsilon decay value", type=float, default=0.999)
+parser.add_argument('--beta', help="The PPO regulation term for exploration", type=float, default=0.01)
+parser.add_argument('--beta_decay', help="The beta decay value", type=float, default=0.995)
 
 # replay memory 
 parser.add_argument('--buffer_type', choices=["deterministic", "uniform"], help="The replay buffer type", default="uniform")
@@ -73,10 +72,9 @@ def create_environment():
 
     return env, brain, brain_name, num_agents, action_size, state_size
 
-def train(agent, env, brain, brain_name, num_agents, n_episodes, eps_start, eps_end, eps_decay):
+def train(agent, env, brain, brain_name, num_agents, n_episodes):
     scores_episodes = deque(maxlen=n_episodes)                  # The score history over all episodes
     scores_window = deque(maxlen=100)                           # last 100 scores
-    #eps = eps_start                                             # initialize epsilon
 
     for i_episode in range(1, n_episodes+1):
         agent.reset()                                           # reset the agent
@@ -86,7 +84,7 @@ def train(agent, env, brain, brain_name, num_agents, n_episodes, eps_start, eps_
 
         while True:
             # agent chooses an action
-            actions = agent.act(states)
+            actions, action_probs = agent.act(states)
             
             # interact with the environment
             env_info = env.step(actions)[brain_name]            # send all actions to tne environment
@@ -97,6 +95,7 @@ def train(agent, env, brain, brain_name, num_agents, n_episodes, eps_start, eps_
             # agent learns with the new experience
             agent.step(np.asarray(states), 
                        np.asarray(actions), 
+                       np.asarray(action_probs),
                        np.asarray(rewards)[:, np.newaxis],
                        np.asarray(next_states), 
                        np.asarray(dones)[:, np.newaxis])
@@ -111,7 +110,6 @@ def train(agent, env, brain, brain_name, num_agents, n_episodes, eps_start, eps_
         scores_episodes.append(score)                           # save most recent score in the history
         scores_window.append(score)                             # save most recent score
         agent.checkpoint()                                      # agent checkpoint
-        #eps = max(eps_end, eps_decay*eps)                      # decrease epsilon
         
         # verify if the goal has been achieved
         score_window = np.mean(scores_window)                   # the mean of the last 100 episodes
@@ -127,8 +125,8 @@ def train(agent, env, brain, brain_name, num_agents, n_episodes, eps_start, eps_
     save_checkpoint(agent, scores_episodes, scores_window)
   
 def save_checkpoint(agent, scores_episodes, scores_window):
-    plot_rewards("reward_history_plot_" + args.checkpoint_suffix + ".png", scores_episodes)
-    plot_rewards("reward_plot_" + args.checkpoint_suffix + ".png", scores_window)
+    utils.plot_scores("reward_history_plot_" + args.checkpoint_suffix + ".png", scores_episodes)
+    utils.plot_scores("reward_plot_" + args.checkpoint_suffix + ".png", scores_window)
     agent.save_checkpoint()
 
 if __name__ == '__main__':
@@ -147,12 +145,8 @@ if __name__ == '__main__':
     else:
         memory = DeterministicReplayBuffer(action_size=action_size, 
                                            state_size=state_size, 
-                                           buffer_size=args.buffer_size,
-                                           batch_size=args.batch_size)
+                                           buffer_size=args.buffer_size)
 
-    # model
-    #network = DuelQNetwork if args.network == "linear_duel" else QNetwork
-    
     # agent
     if args.algorithm == "ddpg":
         agent = ddpg.Agent(state_size=state_size, 
@@ -177,18 +171,18 @@ if __name__ == '__main__':
                           memory=memory,
                           lr_actor=args.lr_actor,
                           gamma=args.gamma,
-                          tau=args.tau,
+                          eps=args.eps,
+                          eps_decay=args.eps_decay,
+                          beta=args.beta,
+                          beta_decay=args.beta_decay,
                           weight_decay=args.weight_decay,
                           update_network_steps=args.update_network_steps,
                           sgd_epoch=args.sgd_epoch,
                           checkpoint_suffix=args.checkpoint_suffix)
 
     if args.train:
-        train(agent, env, brain, brain_name, num_agents,
-              n_episodes=args.train_episodes, 
-              eps_start=args.eps_start, 
-              eps_end=args.eps_end, 
-              eps_decay=args.eps_decay)
+        train(agent, env, brain, brain_name, num_agents, n_episodes=args.train_episodes)
+
 #    else:
 #        test(agent, env, brain, brain_name, n_episodes=args.test_episodes)
 
