@@ -69,16 +69,12 @@ class Agent():
         # learn every n steps
         self.n_step = (self.n_step + 1) % self.update_network_steps
         if self.n_step == 0 or np.any(done):
+            experiences = self.memory.sample()  # retrieve trajectories
             for i in range(self.sgd_epoch):
-                experiences = self.memory.sample()
                 self.learn(experiences, self.gamma)
-                
-            # the clipping parameter reduces as time goes on
-            self.eps *= self.eps_decay
-            
-            # the regulation term also reduces
-            # this reduces exploration in later runs
-            self.beta *= self.beta_decay
+            self.eps *= self.eps_decay          # the PPO clipping parameter reduces as time goes on
+            self.beta *= self.beta_decay        # the regulation term reduces exploration in later runs
+            self.memory.reset()                 # reset memory
 
     def act(self, state):
         """Returns actions for given state as per current policy."""
@@ -90,7 +86,6 @@ class Agent():
         return np.clip(action.cpu().data.numpy(), -1, 1), action_prob.cpu().data.numpy()
 
     def reset(self):
-        self.memory.reset()
         self.n_step = 0
 
     def learn(self, experiences, gamma):
@@ -108,24 +103,24 @@ class Agent():
         states, actions, action_probs, rewards, next_states, dones = experiences
         
         L = -self.clipped_surrogate(states, actions, action_probs, rewards)
+        self.actor_loss = L
 
         self.actor_optimizer.zero_grad()
         L.backward()
+        #torch.nn.utils.clip_grad_norm(self.actor.parameters(), 5)
         self.actor_optimizer.step()
-        del L
 
     def clipped_surrogate(self, states, actions, action_probs, rewards):
-        discount = self.gamma ** torch.arange(len(rewards))     # compute the discounts
-        discount = discount.float().to(device)                  # send to GPU if available
-        rewards = rewards * discount.view(-1, 1, 1)             # discounted rewards
-        rewards = utils.future_rewards(rewards)                 # convert rewards to future rewards
-        rewards = utils.normalize_rewards(rewards)              # normalize rewards
+        discount = self.gamma ** torch.arange(len(rewards)).to(device)  # compute the discounts
+        rewards = rewards * discount.float().view(-1, 1, 1)             # discounted rewards
+        rewards = utils.future_rewards(rewards)                         # convert rewards to future rewards
+        rewards = utils.normalize_rewards(rewards)                      # normalize rewards
 
         # convert states to policy (or probability)
         new_actions, new_action_probs = self.states_to_prob(states)
         
         # Ratio for clipping. We are dealing with log probabilities, hence the minus, not division.
-        ratio = new_action_probs - action_probs
+        ratio = (new_action_probs - action_probs).exp()
 
         # clipped function
         clip = torch.clamp(ratio, 1 - self.eps, 1 + self.eps)
@@ -134,15 +129,14 @@ class Agent():
         # include a regularization term
         # this steers new_policy towards 0.5
         # add in 1.e-10 to avoid log(0) which gives nan
-        entropy = -(new_action_probs.exp() * action_probs + 1.e-10) + \
-            (1.0 - new_action_probs.exp()) * (1.0 - action_probs + 1.e-10)
+        entropy = -new_action_probs.exp() * new_action_probs
 
         # this returns an average of all the entries of the tensor
         # effective computing L_sur^clip / T
         # averaged over time-step and number of trajectories
         # this is desirable because we have normalized our rewards
         return torch.mean(clipped_surrogate + self.beta * entropy)
-        
+
     def states_to_prob(self, states):
         """Convert states to probability, passing through the policy"""
         T, A, state_size = states.shape                             # T=time steps, A=number of agents
@@ -160,5 +154,5 @@ class Agent():
         utils.plot_scores("actor_loss_" + self.checkpoint_suffix + ".png", self.actor_loss_episodes, label="loss")
         
         # network
-        torch.save(self.actor_local.state_dict(), "actor_" + self.checkpoint_suffix + ".pth")
+        torch.save(self.actor.state_dict(), "actor_" + self.checkpoint_suffix + ".pth")
         

@@ -42,11 +42,8 @@ parser.add_argument('--beta_decay', help="The beta decay value", type=float, def
 parser.add_argument('--buffer_type', choices=["deterministic", "uniform"], help="The replay buffer type", default="uniform")
 parser.add_argument('--buffer_size', help="The replay buffer size", type=int, default=int(1e5))
 
-# model
-parser.add_argument('--network', choices=["ddpg_linear1", "ddpg_linear2"], help="The neural network model", default="ddpg_linear1")
-
-def create_environment():
-    env = UnityEnvironment(file_name=args.env, no_graphics=True)
+def create_environment(no_graphics=False):
+    env = UnityEnvironment(file_name=args.env, no_graphics=no_graphics)
     #env = UnityEnvironment(file_name="Reacher_Env/Reacher.app", docker_training=True, no_graphics=False)
 
     # get the default brain
@@ -71,6 +68,36 @@ def create_environment():
     print('The state for the first agent looks like:', states[0])
 
     return env, brain, brain_name, num_agents, action_size, state_size
+
+def test(agent, env, brain, brain_name, num_agents, n_episodes):
+    scores_episodes = deque(maxlen=n_episodes)                  # The score history over all episodes
+
+    for i_episode in range(1, n_episodes+1):
+        agent.reset()                                           # reset the agent
+        env_info = env.reset(train_mode=False)[brain_name]      # reset the environment
+        states = env_info.vector_observations                   # get initial observation
+        scores = np.zeros(num_agents)                           # initialize the score (for each agent)
+
+        while True:
+            # agent chooses an action
+            actions, action_probs = agent.act(states)
+            
+            # interact with the environment
+            env_info = env.step(actions)[brain_name]            # send all actions to tne environment
+            next_states = env_info.vector_observations          # get next state (for each agent)
+            rewards = env_info.rewards                          # get reward (for each agent)
+            dones = env_info.local_done                         # see if episode finished
+            
+            scores += rewards                                   # update the score (for each agent)
+            states = next_states                                # roll over states to next time step
+            if np.any(dones):                                   # exit loop if episode finished
+                break
+
+        # checkpoint 
+        score = np.mean(scores)                                 # mean over agents
+        scores_episodes.append(score)                           # save most recent score in the history
+        score_mean = np.mean(scores_episodes)                   # the mean of all episodes so far
+        print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, score_mean))
 
 def train(agent, env, brain, brain_name, num_agents, n_episodes):
     scores_episodes = deque(maxlen=n_episodes)                  # The score history over all episodes
@@ -133,7 +160,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     # environment
-    env, brain, brain_name, num_agents, action_size, state_size = create_environment()
+    env, brain, brain_name, num_agents, action_size, state_size = create_environment(no_graphics=args.train)
 
     # replay memory
     if args.buffer_type == "uniform":
@@ -182,8 +209,7 @@ if __name__ == '__main__':
 
     if args.train:
         train(agent, env, brain, brain_name, num_agents, n_episodes=args.train_episodes)
-
-#    else:
-#        test(agent, env, brain, brain_name, n_episodes=args.test_episodes)
+    else:
+        test(agent, env, brain, brain_name, num_agents, n_episodes=args.test_episodes)
 
     env.close()

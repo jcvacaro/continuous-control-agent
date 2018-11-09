@@ -30,4 +30,5 @@ def future_rewards(rewards, axis=0):
     return torch_inv(torch_inv(rewards, axis=axis).cumsum(axis), axis=axis)
 
 def normalize_rewards(rewards, axis=0):
-    return (rewards - rewards.mean(axis).float()) / (rewards.std(axis).float() + 1.0e-10)
+    #return (rewards - rewards.mean(axis).float()) / (rewards.std(axis).float() + 1.0e-10)
+    return (rewards - rewards.mean().float()) / (rewards.std().float() + 1.0e-10)
