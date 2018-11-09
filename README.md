@@ -34,28 +34,16 @@ The environment is considered solved, when the average (over 100 episodes) of th
 The source code is implemented in Python 3x, and uses PyTorch as the Machine Learning framework. 
 
 1. Install PyTorch
-    - Windows
-        - [Anaconda for Windows](https://conda.io/docs/user-guide/install/windows.html)
-            - Select the Python 3x version
-        - [PyTorch](https://pytorch.org/get-started/locally/)
-    - Linux
-        - Install [Docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-docker-ce)
-        - See the Docker for instructions about how to generate the image
+    - Windows: [Anaconda](https://conda.io/docs/user-guide/install/windows.html), [PyTorch](https://pytorch.org/get-started/locally/)
+    - Linux: [Anaconda](https://conda.io/docs/user-guide/install/linux.html), [PyTorch](https://pytorch.org/get-started/locally/)
+    - Docker: See the Dockerfile for instructions about how to generate the image
 2. Download the environment from one of the links below. You need only select the environment that matches your operating system:
-    - Single Agent
-        - Linux: [click here](https://drive.google.com/uc?id=1RDmEUl8OxibLfMAHphY9LcKg-f5Yra-R)
-        - Windows (64-bit): [click here](https://drive.google.com/uc?id=1QRSQECQf95Qh1_OdTPau9D6WCiwLGKkD)
-    - Multi-Agent
-        - Linux: [click here](https://drive.google.com/uc?id=1prC-ZHLWEKcoMjQllx6HJyTu7rclzDM4)
-        - Windows (64-bit): [click here](https://drive.google.com/uc?id=1wa78vhgi370N8JcJ9A4j9k0QBKIFdA4x)
-3. Place the file(s) in the repository folder, and unzip (or decompress) the file(s).
-4. To test the agent with a pre-trained network, download one of the model checkpoints:
-    - Single Agent
-        - [actor](https://drive.google.com/uc?id=1OuutszmDw4-Cp--1GCBpXecy-mli4gQ-)
-        - [critic](https://drive.google.com/uc?id=1VfH2mZYHxhVeMd-lGv3BrBcvyCxzce2n)
-    - Multi-Agent
-        - [actor](https://drive.google.com/uc?id=1Ix9iZ4ja1KXs1_IQd_oHIE6KGHCXzI2w)
-        - [critic](https://drive.google.com/uc?id=1XgzpuK3eR59EgMqbHhoEz5Fry0WkaPIp)
+    - Single Agent: [Linux](https://drive.google.com/uc?id=1RDmEUl8OxibLfMAHphY9LcKg-f5Yra-R), [Windows 64-bit](https://drive.google.com/uc?id=1QRSQECQf95Qh1_OdTPau9D6WCiwLGKkD)
+    - Multi-Agent: [Linux](https://drive.google.com/uc?id=1prC-ZHLWEKcoMjQllx6HJyTu7rclzDM4), [Windows 64-bit](https://drive.google.com/uc?id=1wa78vhgi370N8JcJ9A4j9k0QBKIFdA4x)
+3. To test the agent with a pre-trained network, download one of the model checkpoints:
+    - Single Agent: [actor](https://drive.google.com/uc?id=1OuutszmDw4-Cp--1GCBpXecy-mli4gQ-), [critic](https://drive.google.com/uc?id=1VfH2mZYHxhVeMd-lGv3BrBcvyCxzce2n)
+    - Multi-Agent: [actor](https://drive.google.com/uc?id=1Ix9iZ4ja1KXs1_IQd_oHIE6KGHCXzI2w), [critic](https://drive.google.com/uc?id=1XgzpuK3eR59EgMqbHhoEz5Fry0WkaPIp)
+4. Place the file(s) in the repository folder, and unzip (or decompress) the file(s).
 
 ## Instructions
 
@@ -70,7 +58,7 @@ To train the agent:
 ```bash
 python main.py --train \
     --train_episodes=800 \
-    --checkpoint_suffix=ddpg_single \
+    --checkpoint_suffix=reacher_ddpg_single \
     --env=Reacher_1/Reacher.app \
     --batch_size=512 \
     --update_network_steps=30 \
@@ -86,7 +74,7 @@ To select the multi-agent environment, issue the following command:
 ```bash
 python main.py --train \
     --train_episodes=400 \
-     --checkpoint_suffix=ddpg_multi_agent \
+     --checkpoint_suffix=reacher_ddpg_multi_agent \
      --env=Reacher_20/Reacher.app \
     --batch_size=512 \
     --update_network_steps=20 \
@@ -98,10 +86,10 @@ python main.py --train \
 To test the agent using a model checkpoint:
 
 ```bash
-python main.py --train \
+python main.py \
     --test_episodes=3 \
-     --checkpoint_suffix=ddpg_multi_agent \
-     --env=Reacher_20/Reacher.app
+    --checkpoint_suffix=reacher_ddpg_multi_agent \
+    --env=Reacher_20/Reacher.app
 ```
 
 In addition, many hyper parameters can be customized such as the learning rate, the reward discount factor gamma. Check the --help for all available options.

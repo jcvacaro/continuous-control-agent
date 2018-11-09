@@ -71,6 +71,7 @@ def create_environment(no_graphics=False):
 
 def test(agent, env, brain, brain_name, num_agents, n_episodes):
     scores_episodes = deque(maxlen=n_episodes)                  # The score history over all episodes
+    agent.load_checkpoint()                                     # loads a pth checkpoint 
 
     for i_episode in range(1, n_episodes+1):
         agent.reset()                                           # reset the agent
@@ -152,8 +153,8 @@ def train(agent, env, brain, brain_name, num_agents, n_episodes):
     save_checkpoint(agent, scores_episodes, scores_window)
   
 def save_checkpoint(agent, scores_episodes, scores_window):
-    utils.plot_scores("reward_history_plot_" + args.checkpoint_suffix + ".png", scores_episodes)
-    utils.plot_scores("reward_plot_" + args.checkpoint_suffix + ".png", scores_window)
+    utils.plot_scores(args.checkpoint_suffix + "_reward_history_plot.png", scores_episodes)
+    utils.plot_scores(args.checkpoint_suffix + "_reward_plot.png", scores_window)
     agent.save_checkpoint()
 
 if __name__ == '__main__':

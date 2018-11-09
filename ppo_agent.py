@@ -151,8 +151,11 @@ class Agent():
     def save_checkpoint(self):
         """Persist checkpoint information"""
         # the history loss
-        utils.plot_scores("actor_loss_" + self.checkpoint_suffix + ".png", self.actor_loss_episodes, label="loss")
+        utils.plot_scores(self.checkpoint_suffix + "_actor_loss.png", self.actor_loss_episodes, label="loss")
         
         # network
-        torch.save(self.actor.state_dict(), "actor_" + self.checkpoint_suffix + ".pth")
+        torch.save(self.actor.state_dict(), self.checkpoint_suffix + "_actor.pth")
         
+    def load_checkpoint(self):
+        """Restore checkpoint information"""
+        self.actor.load_state_dict(torch.load(self.checkpoint_suffix + "_actor.pth"))

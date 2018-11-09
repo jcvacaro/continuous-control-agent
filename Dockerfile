@@ -1,3 +1,16 @@
+# Instructions for using this project with Docker
+#
+# Install Docker
+# https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-docker-ce
+#
+# To create the container image
+# docker build -t pyt:0.1 .
+#
+# To create a new container 
+# ./run.sh
+#
+# Then, just execute the main.py application as described in the README.md file
+
 ARG from_nvidia_gl=nvidia/opengl:1.0-glvnd-runtime-ubuntu16.04
 ARG from_pytorch=pytorch/pytorch:0.4.1-cuda9-cudnn7-runtime
 

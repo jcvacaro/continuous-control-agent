@@ -114,7 +114,7 @@ class Agent():
         states, actions, action_probs, rewards, next_states, dones = experiences
 
         # normalize rewards
-        rewards = (rewards - rewards.mean().float()) / (rewards.std().float() + 1.0e-10)
+        rewards = utils.normalize_rewards(rewards)
         
         # ---------------------------- update critic ---------------------------- #
         # Get predicted next-state actions and Q values from target models
@@ -168,13 +168,18 @@ class Agent():
     def save_checkpoint(self):
         """Persist checkpoint information"""
         # the history loss
-        utils.plot_scores("actor_loss_" + self.checkpoint_suffix + ".png", self.actor_loss_episodes, label="loss")
-        utils.plot_scores("critic_loss_" + self.checkpoint_suffix + ".png", self.critic_loss_episodes, label="loss")
+        utils.plot_scores(self.checkpoint_suffix + "_actor_loss.png", self.actor_loss_episodes, label="loss")
+        utils.plot_scores(self.checkpoint_suffix + "_critic_loss.png", self.critic_loss_episodes, label="loss")
         
         # network
-        torch.save(self.actor_local.state_dict(), "actor_" + self.checkpoint_suffix + ".pth")
-        torch.save(self.critic_local.state_dict(), "critic_" + self.checkpoint_suffix + ".pth")
+        torch.save(self.actor_local.state_dict(), self.checkpoint_suffix + "_actor.pth")
+        torch.save(self.critic_local.state_dict(), self.checkpoint_suffix + "_critic.pth")
 
+    def load_checkpoint(self):
+        """Restore checkpoint information"""
+        self.actor_local.load_state_dict(torch.load(self.checkpoint_suffix + "_actor.pth"))
+        self.critic_local.load_state_dict(torch.load(self.checkpoint_suffix + "_critic.pth"))
+        
 class OUNoise:
     """Ornstein-Uhlenbeck process."""
 
