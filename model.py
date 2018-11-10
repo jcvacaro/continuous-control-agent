@@ -74,7 +74,7 @@ class Critic(nn.Module):
         return self.fc3(x)
 
 class PPOActor(nn.Module):
-    """Actor (Policy) Model."""
+    """PPO Actor (Policy) Model."""
 
     def __init__(self, state_size, action_size, seed, fc1_units=400, fc2_units=300):
         """Initialize parameters and build model.

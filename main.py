@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser(description="DQN Reinforcement Learning Agent")
 
 parser.add_argument('--seed', help="Seed for random number generation", type=int, default=3)
 parser.add_argument('--env', help="The environment path", default="Reacher_1/Reacher.app")
-parser.add_argument('--checkpoint_suffix', help="The string suffix for saving checkpoint files", default="default")
+parser.add_argument('--checkpoint_prefix', help="The string prefix for saving checkpoint files", default="default")
 
 # training/testing flags
 parser.add_argument('--train', help="train or test (flag)", action="store_true")
@@ -153,8 +153,8 @@ def train(agent, env, brain, brain_name, num_agents, n_episodes):
     save_checkpoint(agent, scores_episodes, scores_window)
   
 def save_checkpoint(agent, scores_episodes, scores_window):
-    utils.plot_scores(args.checkpoint_suffix + "_reward_history_plot.png", scores_episodes)
-    utils.plot_scores(args.checkpoint_suffix + "_reward_plot.png", scores_window)
+    utils.plot_scores(args.checkpoint_prefix + "_reward_history_plot.png", scores_episodes)
+    utils.plot_scores(args.checkpoint_prefix + "_reward_plot.png", scores_window)
     agent.save_checkpoint()
 
 if __name__ == '__main__':
@@ -190,7 +190,7 @@ if __name__ == '__main__':
                            weight_decay=args.weight_decay,
                            update_network_steps=args.update_network_steps,
                            sgd_epoch=args.sgd_epoch,
-                           checkpoint_suffix=args.checkpoint_suffix)
+                           checkpoint_prefix=args.checkpoint_prefix)
     else:
         agent = ppo.Agent(state_size=state_size, 
                           action_size=action_size, 
@@ -206,7 +206,7 @@ if __name__ == '__main__':
                           weight_decay=args.weight_decay,
                           update_network_steps=args.update_network_steps,
                           sgd_epoch=args.sgd_epoch,
-                          checkpoint_suffix=args.checkpoint_suffix)
+                          checkpoint_prefix=args.checkpoint_prefix)
 
     if args.train:
         train(agent, env, brain, brain_name, num_agents, n_episodes=args.train_episodes)

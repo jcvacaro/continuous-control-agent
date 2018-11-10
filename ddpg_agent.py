@@ -15,7 +15,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Agent():
     """Interacts with and learns from the environment."""
     
-    def __init__(self, state_size, action_size, seed, memory, batch_size, lr_actor, lr_critic, clip_critic, gamma, tau, weight_decay, update_network_steps, sgd_epoch, checkpoint_suffix):
+    def __init__(self, state_size, action_size, seed, memory, batch_size, lr_actor, lr_critic, clip_critic, gamma, tau, weight_decay, update_network_steps, sgd_epoch, checkpoint_prefix):
         """Initialize an Agent object.
         
         Params
@@ -33,7 +33,7 @@ class Agent():
             weight_decay (float): The weight decay
             update_network_steps (int): How often to update the network
             sgd_epoch (int): Number of iterations for each network update
-            checkpoint_suffix (string): The string suffix for saving checkpoint files
+            checkpoint_prefix (string): The string prefix for saving checkpoint files
         """
         self.state_size = state_size
         self.action_size = action_size
@@ -51,7 +51,7 @@ class Agent():
         self.n_step = 0
         
         # checkpoint
-        self.checkpoint_suffix = checkpoint_suffix
+        self.checkpoint_prefix = checkpoint_prefix
         self.actor_loss_episodes = []
         self.critic_loss_episodes = []
         self.actor_loss = 0
@@ -168,17 +168,17 @@ class Agent():
     def save_checkpoint(self):
         """Persist checkpoint information"""
         # the history loss
-        utils.plot_scores(self.checkpoint_suffix + "_actor_loss.png", self.actor_loss_episodes, label="loss")
-        utils.plot_scores(self.checkpoint_suffix + "_critic_loss.png", self.critic_loss_episodes, label="loss")
+        utils.plot_scores(self.checkpoint_prefix + "_actor_loss.png", self.actor_loss_episodes, label="loss")
+        utils.plot_scores(self.checkpoint_prefix + "_critic_loss.png", self.critic_loss_episodes, label="loss")
         
         # network
-        torch.save(self.actor_local.state_dict(), self.checkpoint_suffix + "_actor.pth")
-        torch.save(self.critic_local.state_dict(), self.checkpoint_suffix + "_critic.pth")
+        torch.save(self.actor_local.state_dict(), self.checkpoint_prefix + "_actor.pth")
+        torch.save(self.critic_local.state_dict(), self.checkpoint_prefix + "_critic.pth")
 
     def load_checkpoint(self):
         """Restore checkpoint information"""
-        self.actor_local.load_state_dict(torch.load(self.checkpoint_suffix + "_actor.pth"))
-        self.critic_local.load_state_dict(torch.load(self.checkpoint_suffix + "_critic.pth"))
+        self.actor_local.load_state_dict(torch.load(self.checkpoint_prefix + "_actor.pth"))
+        self.critic_local.load_state_dict(torch.load(self.checkpoint_prefix + "_critic.pth"))
         
 class OUNoise:
     """Ornstein-Uhlenbeck process."""

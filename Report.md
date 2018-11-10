@@ -34,6 +34,13 @@ There are 4 networks involved in DDPG: the local actor, the local critic, the ta
 
 3. Soft updates: Instead of performing a huge update every n steps, DDPG slowly updates the target networks based on the local networks every step. Remember that the local networks are the most updated because those are the ones being trained. The target networks are slowly updated to maintain stability during learning.
 
+Training the agent on the target environment was really involving. The following techniques contributed to the stability of the algorithm significantly:
+
+- Normalizing rewards: Looking at the reward plot at the begining of the journey, it was clear that the values were very noisy over time. Applying normalization made the values more standard when dealing with different magnitudes, and also reduced extreme values.
+- Increasing the batch size: Going from 128 to 512 also reduced the noise in the actor and critic loss. That is probably because a more significant sampling is performed from the total entries in the replay memory.
+- Clipping the critic gradients: It is very clear the relationship between the critic and the actor loss, and of course that impacts the rewards. So, since the critic guides the actor gradient updates, reducing the variance of the critic improves the whole system. The goal is to use a clip function in the gradients to eliminate extreme updates in the critic network.
+- Choosing the weight decay value for the optimizer: Here the actor loss plot helped a lot. The loss started very well decreasing over time, but after a certain number of episodes it diverged completely by increasing its value. The weight decay was criticaly important for solving this problem. By decreasing the learning rate during the optimization step probably contributed for the network to reach a better local minimum. 
+
 ### The replay Buffer
 
 `memory.py` holds the implementation for the memory buffers strategies. The DDPG algorithm uses a uniform sampling buffer with the objective of training the model by first storing experiences in the buffer, and then replaying a batch of experiences from it in a subsequent step. The expectation is to reduce the correlation of such observations, which leads to a more stable training procedure. The implementation of this strategy is defined in the ReplayBuffer class.
@@ -42,7 +49,9 @@ There are 4 networks involved in DDPG: the local actor, the local critic, the ta
 
 `model.py` implements the neural network architecture for the actor and the critic. Both models are very similar, consisting of 3 Multilayer perceptron (MLP) layers. Each layer uses the RELU action function, except the last one, which has dimension equivalent to the number of actions and applies the `tanh` activation function. That is because `tanh` outputs values between -1 and 1, exactly the continuous action space needed for solving the target environment. The table below shows the complete network model configuration:
 
-- Actor
+#### Actor
+
+The actor represents the policy.
 
 | Layer |  type  | Input | Output | Activation |
 | ----- | ------ | ----- | ------ | ---------- |
@@ -50,7 +59,9 @@ There are 4 networks involved in DDPG: the local actor, the local critic, the ta
 | 2     | linear | 400   | 300    | RELU       |
 | 3     | linear | 300   | 4      | TANH       |
 
-- Critic: The second layer also includes the action, Q(s, a)
+#### Critic
+
+The critic represents the Q-value function Q(s, a). The action is incorporated into the second layer of the network.
 
 | Layer |  type  | Input | Output | Activation |
 | ----- | ------ | ----- | ------ | ---------- |
@@ -104,11 +115,12 @@ The complete configuration is shown in the table below.
 
 ## Ideas for future work
 
-
+- Distribute computation across multiple machines: The multi-agent environment converged much faster than the single one. It will be interesting to see how it behaves when multiple machines are involved in the learning process. Another aspect is that agents will work asynchronously.
+- Compare different algorithms: The current DDPG implementation actually solves both environments. However, there are other strategies that could be applied such as PPO, D4PG, A3C. What are the differences? When to use one or the other? This repository contains an experimental version for PPO, and I will be adding support for other algorithms soon in order to perform benchmarks.
 
 ## References
 
-- [Human-Level Control through Deep Reinforcement Learning](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
-- [Deep Reinforcement Learning with Double Q-Learning](https://arxiv.org/abs/1509.06461)
-- [Dueling Network Architectures for Deep Reinforcement Learning](https://arxiv.org/abs/1511.06581)
-- [Prioritized Experience Replay](https://arxiv.org/abs/1511.05952)
+- [DDPG](https://arxiv.org/abs/1509.02971)
+- [PPO](https://arxiv.org/pdf/1707.06347.pdf)
+- [A3C](https://arxiv.org/pdf/1602.01783.pdf)
+- [D4PG](https://openreview.net/pdf?id=SyZipzbCb)

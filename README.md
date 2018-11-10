@@ -58,7 +58,7 @@ To train the agent:
 ```bash
 python main.py --train \
     --train_episodes=800 \
-    --checkpoint_suffix=reacher_ddpg_single \
+    --checkpoint_prefix=reacher_ddpg_single \
     --env=Reacher_1/Reacher.app \
     --batch_size=512 \
     --update_network_steps=30 \
@@ -74,7 +74,7 @@ To select the multi-agent environment, issue the following command:
 ```bash
 python main.py --train \
     --train_episodes=400 \
-     --checkpoint_suffix=reacher_ddpg_multi_agent \
+     --checkpoint_prefix=reacher_ddpg_multi_agent \
      --env=Reacher_20/Reacher.app \
     --batch_size=512 \
     --update_network_steps=20 \
@@ -88,7 +88,7 @@ To test the agent using a model checkpoint:
 ```bash
 python main.py \
     --test_episodes=3 \
-    --checkpoint_suffix=reacher_ddpg_multi_agent \
+    --checkpoint_prefix=reacher_ddpg_multi_agent \
     --env=Reacher_20/Reacher.app
 ```
 
